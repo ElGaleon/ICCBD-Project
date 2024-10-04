@@ -1,0 +1,5 @@
+rules:
+  - pattern: "org.apache.ZooKeeperService<name0=StandaloneServer, name1=InMemoryDataTree><>Value"
+    name: "zookeeper_$1"
+    type: GAUGE
+    help: "Zookeeper metric $1"

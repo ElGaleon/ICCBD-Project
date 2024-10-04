@@ -1,64 +1,46 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"context"
+	"log"
+	"time"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/IBM/sarama"
 )
 
-var kafkaServer, kafkaTopic string
+type exampleConsumerGroupHandler struct{}
 
-const groupID = "test-group"
-
-func init() {
-	kafkaServer = readFromENV("KAFKA_BROKER", "localhost:9092")
-	kafkaTopic = readFromENV("KAFKA_TOPIC", "test")
-
-	fmt.Println("Kafka Broker - ", kafkaServer)
-	fmt.Println("Kafka topic - ", kafkaTopic)
+func (exampleConsumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error   { return nil }
+func (exampleConsumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
+func (h exampleConsumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	for msg := range claim.Messages() {
+		log.Printf("Received message: %s\n", string(msg.Value))
+		// Process the message as per your requirement here
+		sess.MarkMessage(msg, "")
+	}
+	return nil
 }
 
 func main() {
-	config := kafka.ConfigMap{"bootstrap.servers": kafkaServer, "group.id": groupID, "go.events.channel.enable": true}
-	consumer, consumerCreateErr := kafka.NewConsumer(&config)
-	if consumerCreateErr != nil {
-		fmt.Println("consumer not created ", consumerCreateErr.Error())
-		os.Exit(1)
+	brokers := []string{"localhost:9093"}
+	groupID := "consumer-group"
+
+	config := sarama.NewConfig()
+	config.Version = sarama.V2_0_0_0 // specify appropriate Kafka version
+	config.Consumer.Offsets.AutoCommit.Enable = true
+	config.Consumer.Offsets.AutoCommit.Interval = 1 * time.Second
+
+	consumerGroup, err := sarama.NewConsumerGroup(brokers, groupID, config)
+	if err != nil {
+		log.Panicf("Error creating consumer group client: %v", err)
 	}
-	subscriptionErr := consumer.Subscribe(kafkaTopic, nil)
-	if subscriptionErr != nil {
-		fmt.Println("Unable to subscribe to topic " + kafkaTopic + " due to error - " + subscriptionErr.Error())
-		os.Exit(1)
-	} else {
-		fmt.Println("subscribed to topic ", kafkaTopic)
-	}
+
+	ctx := context.Background()
 
 	for {
-		fmt.Println("waiting for event...")
-		kafkaEvent := <-consumer.Events()
-		if kafkaEvent != nil {
-			switch event := kafkaEvent.(type) {
-			case *kafka.Message:
-				fmt.Println("Message " + string(event.Value))
-			case kafka.Error:
-				fmt.Println("Consumer error ", event.String())
-			case kafka.PartitionEOF:
-				fmt.Println(kafkaEvent)
-			default:
-				fmt.Println(kafkaEvent)
-			}
-		} else {
-			fmt.Println("Event was null")
+		err := consumerGroup.Consume(ctx, []string{"post-likes"}, exampleConsumerGroupHandler{})
+		if err != nil {
+			log.Panicf("Error from consumer: %v", err)
 		}
 	}
-
-}
-
-func readFromENV(key, defaultVal string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultVal
-	}
-	return value
 }

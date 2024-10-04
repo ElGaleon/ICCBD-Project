@@ -1,9 +1,4 @@
-FROM golang:1.19
+FROM docker.io/bitnami/kafka:3.3
 
-ENV PORT=9000
-WORKDIR /app
-COPY . .
-RUN go get -d -v github.com/confluentinc/confluent-kafka-go/kafka \
-RUN go build
-CMD ["./server"]
-
+ADD prom-jmx-agent-config.yml /usr/app/prom-jmx-agent-config.yml
+ADD https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/0.6/jmx_prometheus_javaagent-0.6.jar /usr/app/jmx_prometheus_javaagent.jar

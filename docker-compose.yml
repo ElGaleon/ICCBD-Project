@@ -2,58 +2,112 @@ version: '3.8'
 services:
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.4
+    image: docker.io/bitnami/zookeeper:3.8
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_ADVERTISED_HOSTNAME: zookeeper
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+      ZOOKEEPER_JMX_PORT: 7072
+      # JMX_EXPORTER_PORT: 7072
+      # JMX_PROMETHEUS_PORT: 7072           # Prometheus Port
+      ZOO_OPTS: -javaagent:/jmx_exporter/jmx_prometheus_javaagent.jar=7072:/jmx_exporter/zookeeper.yml
     ports:
       - '22181:2181'
-
+      - '7072:7072'
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - ./jmx_exporter/jmx_prometheus_javaagent.jar:/jmx_exporter/jmx_prometheus_javaagent.jar
+      - ./jmx_exporter/zookeeper.yml:/jmx_exporter/zookeeper.yml
   kafka:
-    image: confluentinc/cp-kafka:7.4.4
+    build:
+        context: .
+        dockerfile: Dockerfile
     container_name: kafka
+    restart: always
     depends_on:
       - zookeeper
     ports:
       - '29092:29092'
+      - '7071:7071'
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+      - ./jmx_exporter/jmx_prometheus_javaagent.jar:/jmx_exporter/jmx_prometheus_javaagent.jar
+      - ./jmx_exporter/kafka.yml:/jmx_exporter/kafka.yml
     environment:
       KAFKA_BROKER_ID: 1
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      ALLOW_PLAINTEXT_LISTENER: yes
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_LISTENERS: CLIENT://:9092,EXTERNAL://:9093
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: CLIENT://kafka:9092,EXTERNAL://localhost:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: CLIENT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
-  producer:
-    image: golang:latest
-    build: ./producer
-    depends_on:
-      - kafka
-    environment:
-      KAFKA_BROKER: "kafka:9092"
-    deploy:
-      replicas: 1  # Simulate 100 producers
-
-  consumer:
-    image: golang:latest
-    build: ./consumer
-    depends_on:
-      - kafka
-    environment:
-      KAFKA_BROKER: "kafka:9092"
-    deploy:
-      replicas: 1  # Simulate 1000 consumers
+      KAFKA_JMX_PORT: 7071                # Set JMX Port for Kafka
+      # JMX_EXPORTER_PORT: 7071             # JMX Exporter Port
+      # JMX_PROMETHEUS_PORT: 7071           # Prometheus Port
+     #  KAFKA_OPTS: -javaagent:/usr/app/jmx_prometheus_javaagent.jar=7071:/usr/app/prom-jmx-agent-config.yml
 
   prometheus:
+    container_name: prometheus
     image: prom/prometheus
     volumes:
-      - "./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
-    networks:
-      - localprom
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./data:/prometheus
     ports:
       - '9090:9090'
+    restart:
+      unless-stopped
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana_data:/var/lib/grafana
+
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:v1.5.0
+    container_name: node_exporter
+    command: '--path.rootfs=/host'
+    pid: host
+    restart: unless-stopped
+    # volumes:
+      # - /node_exporter:/host:ro,rslave
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: cadvisor
+    command:
+      - '-port=8098'
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    privileged: true
+    restart: unless-stopped
+
+
+# Docker volumes for persistence
+volumes:
+  zookeeper_data:
+    driver: local
+  kafka_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
 
 networks:
-  localprom:
+  monitoring:
     driver: bridge
+
+
 

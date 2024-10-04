@@ -1,59 +1,58 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
+	"log"
+	"math/rand"
 	"os"
-	"time"
 
-	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/IBM/sarama"
 )
 
-var kafkaServer, kafkaTopic string
-
-func init() {
-	kafkaServer = readFromENV("KAFKA_BROKER", "localhost:9092")
-	kafkaTopic = readFromENV("KAFKA_TOPIC", "test")
-
-	fmt.Println("Kafka Broker - ", kafkaServer)
-	fmt.Println("Kafka topic - ", kafkaTopic)
+type Message struct {
+	UserId     int    `json:"user_id"`
+	PostId     string `json:"post_id"`
+	UserAction string `json:"user_action"`
 }
-func main() {
-	producer, producerCreateErr := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": kafkaServer})
 
-	if producerCreateErr != nil {
-		fmt.Println("Failed to create producer due to ", producerCreateErr)
+func main() {
+	brokers := []string{"localhost:9093"}
+	producer, err := sarama.NewSyncProducer(brokers, nil)
+	if err != nil {
+		log.Fatalln("Failed to start Sarama producer:", err)
 		os.Exit(1)
 	}
+
+	// Dummy Data
+	userId := [5]int{100001, 100002, 100003, 100004, 100005}
+	postId := [5]string{"POST00001", "POST00002", "POST00003", "POST00004", "POST00005"}
+	userAction := [5]string{"love", "like", "hate", "smile", "cry"}
+
 	for {
-		for i := 0; i < 5; i++ {
-			value := time.Now().String()
-			producerErr := producer.Produce(&kafka.Message{
-				TopicPartition: kafka.TopicPartition{Topic: &kafkaTopic, Partition: kafka.PartitionAny},
-				Value:          []byte(value),
-			}, nil)
-
-			if producerErr != nil {
-				fmt.Println("unable to enqueue message ", value)
-			}
-			event := <-producer.Events()
-
-			message := event.(*kafka.Message)
-
-			if message.TopicPartition.Error != nil {
-				fmt.Println("Delivery failed due to error ", message.TopicPartition.Error)
-			} else {
-				fmt.Println("Delivered message to offset " + message.TopicPartition.Offset.String() + " in partition " + message.TopicPartition.String())
-			}
+		// we are going to take random data from the dummy data
+		message := Message{
+			UserId:     userId[rand.Intn(len(userId))],
+			PostId:     postId[rand.Intn(len(postId))],
+			UserAction: userAction[rand.Intn(len(userAction))],
 		}
 
-		time.Sleep(time.Second * 5) //wait for 5 seconds before sending another batch of messages
-	}
+		jsonMessage, err := json.Marshal(message)
 
-}
-func readFromENV(key, defaultVal string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultVal
+		if err != nil {
+			log.Fatalln("Failed to marshal message:", err)
+			os.Exit(1)
+		}
+
+		msg := &sarama.ProducerMessage{
+			Topic: "post-likes",
+			Value: sarama.StringEncoder(jsonMessage),
+		}
+
+		_, _, err = producer.SendMessage(msg)
+		if err != nil {
+			log.Fatalln("Failed to send message:", err)
+			os.Exit(1)
+		}
+		log.Println("Message sent!")
 	}
-	return value
 }
