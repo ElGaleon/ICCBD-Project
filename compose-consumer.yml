@@ -1,17 +1,28 @@
+version: "3.5"
 services:
-  app:
+  consumer-1:
     image: bitnami/python:3.9
     command: "sh -c 'pip install -r requirements.txt && python consumer.py'"
     networks:
-      - kafkanet
+      - kafka-network
     environment:
       BOOTSTRAP_SERVERS: kafka-0:9092,kafka-1:9092,kafka-2:9092
       TOPIC_NAME: orders
       GROUP_ID: orders-group
     volumes:
       - .:/app
+  consumer-2:
+      image: bitnami/python:3.9
+      command: "sh -c 'pip install -r requirements.txt && python consumer.py'"
+      networks:
+        - kafka-network
+      environment:
+        BOOTSTRAP_SERVERS: kafka-0:9092,kafka-1:9092,kafka-2:9092
+        TOPIC_NAME: orders
+        GROUP_ID: orders-group
+      volumes:
+        - .:/app
 
 networks:
-  kafkanet:
+  kafka-network:
     external: true
-    name: kafka-network

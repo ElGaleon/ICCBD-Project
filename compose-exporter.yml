@@ -1,0 +1,20 @@
+services:
+  kafka-exporter:
+    container_name: kafka-exporter
+    image: docker.io/bitnami/kafka-exporter:latest
+    ports:
+      - "9308:9308"
+    networks:
+      - kafka-network
+    environment:
+      - KAFKA_VERSION=2.8.1
+    command: "--kafka.server=kafka-0:9092"
+    healthcheck:
+      test: "bash -c 'printf \"\" > /dev/tcp/127.0.0.1/9308; exit $$?;'"
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+networks:
+  kafka-network:
+    external: true

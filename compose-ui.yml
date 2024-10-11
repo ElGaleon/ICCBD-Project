@@ -1,28 +1,18 @@
+version: "3.5"
+
 services:
   kafka-ui:
     image: provectuslabs/kafka-ui:master
     container_name: kafka-ui
     ports:
       - "8080:8080"
-    volumes:
-      - ./kafka-ui/config.yml:/etc/kafkaui/dynamic_config.yaml
     networks:
-      - kafkanet
+        - kafka-network
     environment:
-      DYNAMIC_CONFIG_ENABLED: "true"
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_METRICS_PORT: 8080
-      KAFKA_CLUSTERS_0_PROMETHEUS: "true"
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-0:9092,kafka-1:9092,kafka-2:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-    healthcheck:
-      test: wget --no-verbose --tries=1 --spider localhost:8080 || exit 1
-      interval: 5s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
 
 networks:
-  kafkanet:
+  kafka-network:
     external: true
-    name: kafka-network

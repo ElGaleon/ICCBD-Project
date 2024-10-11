@@ -1,4 +1,20 @@
 services:
+  kafka-exporter:
+    container_name: kafka-exporter
+    image: docker.io/bitnami/kafka-exporter:latest
+    ports:
+      - "9308:9308"
+    networks:
+      - kafka-network
+    environment:
+      - KAFKA_VERSION=2.8.1
+    command: [ "--kafka.server=kafka-0:9092", "--kafka.server=kafka-1:9092", "--kafka.server=kafka-2:9092" ]
+    healthcheck:
+      test: "bash -c 'printf \"\" > /dev/tcp/127.0.0.1/9308; exit $$?;'"
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -10,33 +26,13 @@ services:
       - ./prometheus:/etc/prometheus
       - prom_data:/prometheus
     networks:
-      - kafkanet
+      - kafka-network
     healthcheck:
       test: wget --no-verbose --tries=1 --spider localhost:9090 || exit 1
       interval: 5s
       timeout: 10s
       retries: 3
       start_period: 5s
-
-  kafka-exporter:
-      image: docker.io/bitnami/kafka-exporter:latest
-      depends_on:
-        kafka-0:
-          condition: service_healthy
-        kafka-1:
-          condition: service_healthy
-        kafka-2:
-            condition: service_healthy
-      networks:
-        - kafkanet
-      command: --kafka.server=kafka-0:9092 --kafka.server=kafka-1:9092
-      healthcheck:
-        test: "bash -c 'printf \"\" > /dev/tcp/127.0.0.1/9308; exit $$?;'"
-        interval: 5s
-        timeout: 10s
-        retries: 3
-        start_period: 5s
-
 
   grafana:
       image: grafana/grafana
@@ -50,7 +46,7 @@ services:
         - ./grafana/provisioning:/etc/grafana/provisioning
         - ./grafana/dashboards:/var/lib/grafana/dashboards
       networks:
-        - kafkanet
+        - kafka-network
       healthcheck:
         test: curl --fail localhost:3000
         interval: 5s
@@ -61,3 +57,7 @@ services:
 volumes:
   prom_data:
     driver: local
+
+networks:
+  kafka-network:
+    external: true
