@@ -42,6 +42,14 @@ class Order:
         return [self.auto() for _ in range(num)]
 
 
+def serialize(obj):
+    if isinstance(obj, datetime.datetime):
+        return obj.isoformat()
+    if isinstance(obj, datetime.date):
+        return str(obj)
+    return obj
+
+
 class Producer:
     def __init__(self, bootstrap_servers: list, topic: str):
         self.bootstrap_servers = bootstrap_servers
@@ -51,8 +59,8 @@ class Producer:
     def create(self):
         return KafkaProducer(
             bootstrap_servers=self.bootstrap_servers,
-            value_serializer=lambda v: json.dumps(v, default=self.serialize).encode("utf-8"),
-            key_serializer=lambda v: json.dumps(v, default=self.serialize).encode("utf-8"),
+            value_serializer=lambda v: json.dumps(v, default=serialize).encode("utf-8"),
+            key_serializer=lambda v: json.dumps(v, default=serialize).encode("utf-8"),
         )
 
     def send(self, orders: typing.List[Order]):
@@ -64,13 +72,6 @@ class Producer:
             except Exception as e:
                 raise RuntimeError("fails to send a message") from e
         self.producer.flush()
-
-    def serialize(self, obj):
-        if isinstance(obj, datetime.datetime):
-            return obj.isoformat()
-        if isinstance(obj, datetime.date):
-            return str(obj)
-        return obj
 
 
 if __name__ == "__main__":
@@ -88,5 +89,5 @@ if __name__ == "__main__":
             logging.info(f"exceeds max run, finish")
             producer.producer.close()
             break
-        producer.send(Order.auto().create(100))
+        producer.send(Order.auto().create(10000))
         time.sleep(1)

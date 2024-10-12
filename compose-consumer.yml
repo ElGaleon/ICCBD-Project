@@ -1,27 +1,51 @@
 version: "3.5"
 services:
   consumer-1:
+    container_name: consumer-1
     image: bitnami/python:3.9
     command: "sh -c 'pip install -r requirements.txt && python consumer.py'"
     networks:
       - kafka-network
     environment:
-      BOOTSTRAP_SERVERS: kafka-0:9092,kafka-1:9092,kafka-2:9092
+      BOOTSTRAP_SERVERS: kafka-0:9092
+      TOPIC_NAME: orders
+      GROUP_ID: orders-group
+    volumes:
+      - .:/app
+  consumer-11:
+    container_name: consumer-11
+    image: bitnami/python:3.9
+    command: "sh -c 'pip install -r requirements.txt && python consumer.py'"
+    networks:
+      - kafka-network
+    environment:
+      BOOTSTRAP_SERVERS: kafka-0:9092
       TOPIC_NAME: orders
       GROUP_ID: orders-group
     volumes:
       - .:/app
   consumer-2:
-      image: bitnami/python:3.9
-      command: "sh -c 'pip install -r requirements.txt && python consumer.py'"
-      networks:
-        - kafka-network
-      environment:
-        BOOTSTRAP_SERVERS: kafka-0:9092,kafka-1:9092,kafka-2:9092
-        TOPIC_NAME: orders
-        GROUP_ID: orders-group
-      volumes:
-        - .:/app
+    container_name: consumer-2
+    image: bitnami/python:3.9
+    command: "sh -c 'pip install -r requirements.txt && python consumer.py'"
+    networks:
+      - kafka-network
+    environment:
+      BOOTSTRAP_SERVERS: kafka-1:9092
+      TOPIC_NAME: books
+    volumes:
+      - .:/app
+  consumer-3:
+    container_name: consumer-3
+    image: bitnami/python:3.9
+    command: "sh -c 'pip install -r requirements.txt && python consumer.py'"
+    networks:
+      - kafka-network
+    environment:
+      BOOTSTRAP_SERVERS: kafka-2:9092
+      TOPIC_NAME: your-topic
+    volumes:
+      - .:/app
 
 networks:
   kafka-network:
