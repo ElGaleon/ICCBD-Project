@@ -8,9 +8,21 @@
     key.serializer=org.apache.kafka.common.serialization.StringSerializer value.serializer=org.apache.kafka.common.serialization.StringSerializer \
     --record-size 1 --producer.config var/lib/kafka/config-properties/producer-at-most-once.properties --print-metrics 
 ```
+
+```python
+    kafka-producer-perf-test.sh \
+    --topic your_topic \
+    --throughput -1 \
+    --num-records 3000000 \
+    --record-size 1024 \
+    --producer-props acks=all bootstrap.servers=localhost:9092 \
+    --producer.config var/lib/kafka/config-properties/producer-at-most-once.properties
+```
+
+
 #### Results
 ```shell
-  52 records sent, 10.2 records/sec (0.00 MB/sec), 16.4 ms avg latency, 455.0 ms max latency.
+52 records sent, 10.2 records/sec (0.00 MB/sec), 16.4 ms avg latency, 455.0 ms max latency.
 51 records sent, 10.1 records/sec (0.00 MB/sec), 2.7 ms avg latency, 13.0 ms max latency.
 51 records sent, 10.1 records/sec (0.00 MB/sec), 4.4 ms avg latency, 35.0 ms max latency.
 50 records sent, 9.9 records/sec (0.00 MB/sec), 2.5 ms avg latency, 18.0 ms max latency.
