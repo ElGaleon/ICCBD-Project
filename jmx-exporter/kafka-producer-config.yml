@@ -1,0 +1,2 @@
+rules:
+  - pattern: kafka.producer<type=(.+), name=(.+)><>(.+)

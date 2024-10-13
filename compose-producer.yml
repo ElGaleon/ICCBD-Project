@@ -4,12 +4,15 @@ services:
     container_name: producer-1
     image: bitnami/python:3.9
     command: "sh -c 'pip install -r requirements.txt && python producer.py'"
+    ports:
+      - "9999:9999" # JMX Exporter port
     networks:
       - kafka-network
     environment:
       BOOTSTRAP_SERVERS: kafka-0:9092
       TOPIC_NAME: orders
       GROUP_ID: orders-group
+      EXTRA_ARGS: "-javaagent:/usr/app/jmx_prometheus_javaagent.jar=9999:/usr/app/prom-jmx-agent-config.yml"
     volumes:
       - .:/app
   producer-2:
@@ -34,6 +37,7 @@ services:
       TOPIC_NAME: your-topic
     volumes:
       - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock
 
 networks:
   kafka-network:

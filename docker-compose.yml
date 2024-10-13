@@ -23,6 +23,7 @@ services:
       EXTRA_ARGS: "-javaagent:/usr/app/jmx_prometheus_javaagent.jar=7071:/usr/app/prom-jmx-agent-config.yml"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./config-properties:/var/lib/kafka/config-properties
   kafka-1:
       build: .
       container_name: kafka-1
