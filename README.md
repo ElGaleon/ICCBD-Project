@@ -32,6 +32,18 @@ $ bin/kafka-topics.sh \
 --bootstrap-server localhost:9092
 ```
 
+## Python Producers set up
+To simulate producers, we will use a python script to send messages to the clusters. This command will run three producers that will sends messages to every cluster.
+```shell
+$ docker-compose -f compose-producer.yml up -d
+```
+
+## Python Consumers set up
+To simulate consumers, we will use a python script to receive messages from the clusters. This command will run three consumers that will receive messages from every cluster.
+```shell
+$ docker-compose -f compose-consumers.yml up -d
+```
+
 ## Prometheus set up
 
 Opening [Prometheus Dashboard](http://localhost:9090/graph) show a rudimentary view of all Kafka metrics. Confirm that Kafka data is being scraped by visiting [targets](http://localhost:9090/targets), where the endpoint kafka should be up.
@@ -52,6 +64,25 @@ Before setting up a dashboard, Prometheus must be added as a data source. Do so 
 On the left side of the dashboard, hover over the Create tab and choose Import. Enter ``721`` under Import via Grafana and Load. Once again, assign a suitable name and choose source as the same Prometheus data source we set up above and import. <br>
 The scope of the graphs and refresh rate can be adjusted on the top right of the dashboard.
 
+---
+## Producer Tests
+To test producer semantics delivery, you have to enter the kafka container and create a topic. After that, you can run the producer-perf-test.sh script to send messages to the topic. 
+I leave an example of how to run the script below:
 
-### Adding metrics to Grafana Panel
-Additional panels can be added by clicking the add panel option and entering the desired query. Grafana suggests possible queries based on the input provided and complete action with ``shift + enter``.
+```shell
+$ producer-perf-test.sh --topic test-topic --num-records 1000 --record-size 1000 --throughput 1000 --producer-props bootstrap.servers=localhost:9092
+```
+
+The test of the project based on compare the different message delivery semantics of Kafka producers (<b>At least once</b>, <b>At most once</b>, <b>Exactly once</b>). <br>
+To reproduce the tests, you have to run the <code>producer-perf-test.sh</code> script adding <code>--config-parameter</code> to set the delivery semantics.
+We created config file to replicate the tests with different delivery semantics. You can see the config files in the <code>producer-configs</code> folder.
+
+You can see some tests results in the <code>5_million_results.md</code> file.
+
+---
+### References
+- [Kafka](https://kafka.apache.org/)
+- [Prometheus](https://prometheus.io/)
+- [Grafana](https://grafana.com/)
+- [Monitoring Kafka](https://danielmrosa.medium.com/monitoring-kafka-b97d2d5a5434)
+- [Monitoring Kafka Producer and Consumer: Best Practices](https://medium.com/@atri_iiita/monitoring-kafka-consumers-and-publishers-best-practices-9a912de8ad0b)
