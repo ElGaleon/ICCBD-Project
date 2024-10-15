@@ -80,6 +80,12 @@ We created config file to replicate the tests with different delivery semantics.
 You can see some tests results in the <code>5_million_results.md</code> file.
 
 ---
+
+### Generic Tests
+If you want to do some more test, take a look at the [Benchmark](./test-results/benchmarks.md) file. There are some examples of tests that you can run to test the performance of your Kafka cluster.
+
+---
+
 ### References
 - [Kafka](https://kafka.apache.org/)
 - [Prometheus](https://prometheus.io/)
